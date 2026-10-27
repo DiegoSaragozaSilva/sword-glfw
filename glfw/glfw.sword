@@ -1,0 +1,108 @@
+package glfw
+
+import "std/strings"
+import "std/mem"
+
+// Errors
+error AllocatorNotEnoughSize = "The chosen allocator does not have enough size."
+
+// GLFW essential constants
+const True  = 1
+const False = 0
+
+const ContextVersionMajor   = 0x00022002
+const ContextVersionMinor   = 0x00022003
+const OpenGLProfile         = 0x00022008
+const OpenGLCoreProfile     = 0x00032001
+
+// Extern functions declarations
+// TODO: Implement glfwCreateWindowSurface
+extern "glfw" func glfwInit() i32
+extern "glfw" func glfwTerminate() void
+extern "glfw" func glfwWindowHint(hint i32, value i32) void
+extern "glfw" func glfwCreateWindow(width i32, height i32, title [*]u8, monitor ?[*]u8, share ?[*]u8) ?[*]u8
+extern "glfw" func glfwDestroyWindow(window ?[*]u8) void
+extern "glfw" func glfwWindowShouldClose(window ?[*]u8) i32
+extern "glfw" func glfwPollEvents() void
+extern "glfw" func glfwMakeContextCurrent(window ?[*]u8) void
+extern "glfw" func glfwSwapBuffers(window ?[*]u8) void
+extern "glfw" func glfwGetProcAddress(procname [*]u8) ?[*]u8
+extern "glfw" func glfwGetVersionString() [*]u8
+extern "glfw" func glfwGetError(description ?[*]u8) i32
+extern "glfw" func glfwGetFramebufferSize(window ?[*]u8,width *i32,height *i32) void
+extern "glfw" func glfwVulkanSupported() i32
+extern "glfw" func glfwGetRequiredInstanceExtensions(count *u32) ?[*][*]u8
+
+// Public structs representation
+type Window = ?[*]u8
+type Monitor = ?[*]u8
+
+// Idiomatic wrappers
+func Init() bool {
+    return glfwInit() == True
+}
+
+func Terminate() void {
+    glfwTerminate()
+}
+
+func WindowHint(hint i32, value i32) void {
+    glfwWindowHint(hint, value)
+}
+
+func CreateWindow(width i32, height i32, title string, monitor Monitor, share Window) Window { 
+    return glfwCreateWindow(width, height, title.ptr, monitor, share)
+}
+
+func DestroyWindow(window Window) void {
+    glfwDestroyWindow(window)
+}
+
+func WindowShouldClose(window Window) bool {
+    return glfwWindowShouldClose(window) == True
+}
+
+func PollEvents() void {
+    glfwPollEvents()
+}
+
+func MakeContextCurrent(window Window) void {
+    glfwMakeContextCurrent(window)
+}
+
+func SwapBuffers(window Window) void {
+    glfwSwapBuffers(window)
+}
+
+func GetProcAddress(procname string) ?[*]u8 {
+    return glfwGetProcAddress(procname.ptr)
+}
+
+func GetVersionString() string {
+    ptr [*]u8 = glfwGetVersionString()
+    return strings.FromC(ptr)
+}
+
+func GetError(description string) i32 {
+    return glfwGetError(description.ptr)
+}
+
+func GetFramebufferSize(window Window, width *i32, height *i32) void {
+    glfwGetFramebufferSize(window, width, height)
+}
+
+func VulkanSupported() i32 {
+    return glfwVulkanSupported() 
+}
+
+func GetRequiredInstanceExtensions(mut alloc mem.Allocator) !?[]string {
+    mut count u32 = 0
+    mut extensions := glfwGetRequiredInstanceExtensions(&count) orelse return nil
+ 
+    // Unpack all instance extensions into a native array of strings 
+    mut _extensions := mem.Alloc[string](alloc, u64(count)) orelse return error.AllocatorNotEnoughSize 
+    for i in 0..count {
+        _extensions[i] = strings.FromC(extensions[i])
+    }
+    return _extensions
+}
